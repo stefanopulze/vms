@@ -1,0 +1,74 @@
+@import './base.css';
+
+.container {
+  padding: 1.3rem;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+
+  button {
+    width: 100%;
+  }
+
+  button:not(:last-child) {
+    border-right: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  button:not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  button.active {
+    background: var(--border-color);
+  }
+}
+
+button {
+  border: 1px solid var(--border-color);
+  background: white;
+  padding: .3rem .6rem;
+  cursor: pointer;
+  font-size: .9rem;
+  border-radius: .4rem;
+  outline-color: var(--border-color);
+
+  &:hover {
+    background: var(--border-color);
+  }
+}
+
+.field {
+  margin-block-end: 1rem;
+
+  label {
+    display: block;
+    margin-block-end: .3rem;
+  }
+}
+
+.field label, .label {
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: .8rem;
+  color: #999;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1rem;
+
+  &.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+
+pre {
+  margin-block-start: 0;
+}

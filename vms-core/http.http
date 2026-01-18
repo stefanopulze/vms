@@ -1,0 +1,66 @@
+#@name QPIGS
+#@no-log
+GET {{host}}/api/inverter/general-status
+
+###
+#@name QPIRI
+#@no-log
+GET {{host}}/api/inverter/rating-info
+
+###
+#@name Warnings
+#@no-log
+GET {{host}}/api/inverter/warnings
+
+###
+#@name Status
+#@no-log
+GET {{host}}/api/status
+
+###
+#@name Info
+#@no-log
+GET {{host}}/api/inverter/info
+
+###
+#@name Mode
+#@no-log
+GET {{host}}/api/inverter/mode
+
+###
+#@name Query
+#@no-log
+GET {{host}}/api/inverter/query?cmd=QFLAG
+
+###
+#@name Flags
+#@no-log
+GET {{host}}/api/inverter/flags
+
+###
+#@name Update Flags
+#@no-log
+PUT {{host}}/api/inverter/flags
+Content-Type: application/json
+
+{
+  "silenceBuzzer": true,
+  "overloadBypass": true,
+  "lcdEscape": true,
+  "overloadRestart": true,
+  "overTemperatureRestart": true,
+  "backlight": false,
+  "alarmPrimarySourceInterrupt": false,
+  "faultCodeRecord": true,
+  "powerSaving": true
+}
+
+###
+#@name Update Source Priority
+#@no-log
+PUT {{host}}/api/inverter/source-priority
+Content-Type: application/json
+
+{
+  "source": "sbu"
+}
