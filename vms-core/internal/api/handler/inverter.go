@@ -2,6 +2,8 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 	"vms-core/internal/api/model"
@@ -16,10 +18,9 @@ const (
 	cacheRatingInfo    = "rating_info"
 )
 
-func NewInverter(inverter *voltronic.Client, em event.Publisher, qs *cache.QuerySnapshot) *InverterHandler {
+func NewInverter(inverter *voltronic.Client, qs *cache.QuerySnapshot) *InverterHandler {
 	return &InverterHandler{
 		inverter:      inverter,
-		event:         em,
 		cache:         cache.New(),
 		querySnapshot: qs,
 	}
@@ -106,7 +107,7 @@ func (h InverterHandler) QueryWarnings(w http.ResponseWriter, r *http.Request) {
 
 func (h InverterHandler) QueryStatus(w http.ResponseWriter, r *http.Request) {
 	gs := h.querySnapshot.GetGeneralStatus()
-	if gs.Timestamp.IsZero() {
+	if gs == nil || gs.Timestamp.IsZero() {
 		data, err := h.inverter.QueryPIGS()
 		if err != nil {
 			response.Error(w, r, http.StatusInternalServerError, err)
@@ -215,6 +216,36 @@ func (h InverterHandler) UpdateChargerSourcePriority(w http.ResponseWriter, r *h
 	// FIXME: validate mode string
 
 	if err := h.inverter.UpdateChargerPriority(mode.Source); err != nil {
+		response.Error(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	response.Header(w, http.StatusAccepted)
+}
+
+func (h InverterHandler) QueryMaxAcChargingCurrentValues(w http.ResponseWriter, r *http.Request) {
+	current, err := h.inverter.QueryMaxAcChargingCurrentValues()
+	if err != nil {
+		response.Error(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	response.Json(w, http.StatusOK, map[string]any{
+		"values": current,
+	})
+}
+
+func (h InverterHandler) UpdateMaxAcChargingCurrent(w http.ResponseWriter, r *http.Request) {
+	var mode model.UpdateChargingCurrent
+	if err := json.NewDecoder(r.Body).Decode(&mode); err != nil {
+		response.Error(w, r, http.StatusBadRequest, err)
+		return
+	}
+
+	// FIXME: validate mode string
+
+	if err := h.inverter.SetMaxAcChargingCurrent(mode.Current); err != nil {
+		slog.Error(fmt.Sprintf("Error setting max charging current: %s", err))
 		response.Error(w, r, http.StatusInternalServerError, err)
 		return
 	}

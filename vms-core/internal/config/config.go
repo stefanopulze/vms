@@ -13,6 +13,7 @@ import (
 type Config struct {
 	Logging LogConfig    `yaml:"logging"`
 	Server  ServerConfig `yaml:"server"`
+	Storage string       `yaml:"storage" env:"STORAGE_PATH"`
 	Serial  struct {
 		PortName  string `yaml:"portName" env:"SERIAL_PORT_NAME"`
 		BaudRate  int    `yaml:"baudRate" env:"SERIAL_BAUD_RATE"`

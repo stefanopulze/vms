@@ -1,9 +1,12 @@
 import ky from "ky";
-import type {DeviceInfo, GeneralStatus, RatingInfo} from "@/api/model.ts";
+import type {BatteryAcChargingCurrentValues, DeviceInfo, GeneralStatus, RatingInfo} from "@/api/model.ts";
 import {customJsonReceiver} from "@/api/utils.ts";
 
 const kyApi = ky.create({
-  parseJson: customJsonReceiver
+  parseJson: customJsonReceiver,
+  retry: {
+    statusCodes: [408, 502, 503, 504]
+  }
 })
 
 class Api {
@@ -33,6 +36,16 @@ class Api {
     return await kyApi.put<RatingInfo>('/api/inverter/charger-source-priority', {
       json: {source}
     }).json()
+  }
+
+  async fetchBatteryAcChargingCurrentValues() {
+    return await kyApi.get<BatteryAcChargingCurrentValues>('/api/inverter/max-ac-charging-current-values').json()
+  }
+
+  async updateBatteryAcChargingCurrent(v: number) {
+    return await kyApi.put('/api/inverter/max-ac-charging-current', {
+      json: {current: v}
+    }).text()
   }
 }
 

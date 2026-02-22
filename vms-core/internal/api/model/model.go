@@ -22,3 +22,7 @@ type ApiRatingInfo struct {
 	SourcePriorityEnum        string `json:"sourcePriorityEnum"`
 	ChargerSourcePriorityEnum string `json:"chargerSourcePriorityEnum"`
 }
+
+type UpdateChargingCurrent struct {
+	Current int `json:"current"`
+}

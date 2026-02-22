@@ -85,3 +85,8 @@ export interface Firmware {
   Major: number
   Minor: number
 }
+
+
+export interface BatteryAcChargingCurrentValues {
+  values: number[]
+}
