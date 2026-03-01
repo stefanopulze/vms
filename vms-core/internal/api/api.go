@@ -69,5 +69,8 @@ func bindInverterApi(router chi.Router, ih *handler.InverterHandler) {
 		r.Get("/query", ih.QueryCommand)
 		r.Put("/source-priority", ih.UpdateSourcePriority)
 		r.Put("/charger-source-priority", ih.UpdateChargerSourcePriority)
+
+		r.Get("/max-ac-charging-current-values", ih.QueryMaxAcChargingCurrentValues)
+		r.Put("/max-ac-charging-current", ih.UpdateMaxAcChargingCurrent)
 	})
 }

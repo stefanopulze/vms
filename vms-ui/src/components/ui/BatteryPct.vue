@@ -21,5 +21,4 @@ defineProps<{ pct: number }>()
     height: 30px;
   }
 }
-
 </style>

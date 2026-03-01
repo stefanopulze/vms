@@ -64,3 +64,9 @@ Content-Type: application/json
 {
   "source": "sbu"
 }
+
+###
+#@name Query Max AC Charging Current
+#@no-log
+GET {{host}}/api/inverter/max-ac-charging-current-values
+Content-Type: application/json

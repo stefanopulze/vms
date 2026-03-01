@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"strings"
 	"time"
+	"vms-core/internal/utils"
 )
 
 func (c *Client) UpdateTime(t time.Time) error {
@@ -124,4 +126,26 @@ func (c *Client) UpdateWorkingMode(v string) error {
 	cmd := fmt.Sprintf("PGR%s", mode)
 	logger.Debug(fmt.Sprintf("Updating working mode: %s", cmd))
 	return c.SendUpdateCommand(cmd)
+}
+
+func (c *Client) SetMaxAcChargingCurrent(v int) error {
+	cmd := fmt.Sprintf("MUCHGC0%03d", v)
+	logger.Debug(fmt.Sprintf("Updating max AC charging current: %s", cmd))
+	return c.SendUpdateCommand(cmd)
+}
+
+func (c *Client) QueryMaxAcChargingCurrentValues() ([]int, error) {
+	var values []int
+	data, err := c.SendCommand("QMUCHGCR")
+	if err != nil {
+		return values, err
+	}
+
+	logger.Debug(fmt.Sprintf("Max AC charging current: %s", data))
+	steps := strings.Split(string(data[1:]), " ")
+	for _, step := range steps {
+		values = append(values, utils.ParseInt(step))
+	}
+
+	return values, nil
 }

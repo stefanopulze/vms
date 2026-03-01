@@ -10,6 +10,7 @@ type QuerySnapshot struct {
 	ratingInfo    *voltronic.DeviceRatingInfo
 	generalStatus *voltronic.DeviceGeneralStatus
 	warnings      *voltronic.DeviceWarning
+	mode          string
 }
 
 func NewQuerySnapshot() *QuerySnapshot {
@@ -36,7 +37,7 @@ func (qs *QuerySnapshot) SetWarnings(warnings *voltronic.DeviceWarning) {
 
 func (qs *QuerySnapshot) GetRatingInfo() *voltronic.DeviceRatingInfo {
 	qs.mux.RLock()
-	qs.mux.RUnlock()
+	defer qs.mux.RUnlock()
 	return qs.ratingInfo
 }
 
@@ -50,4 +51,16 @@ func (qs *QuerySnapshot) GetWarnings() *voltronic.DeviceWarning {
 	qs.mux.RLock()
 	defer qs.mux.RUnlock()
 	return qs.warnings
+}
+
+func (qs *QuerySnapshot) SetMode(mode string) {
+	qs.mux.Lock()
+	qs.mode = mode
+	qs.mux.Unlock()
+}
+
+func (qs *QuerySnapshot) GetMode() string {
+	qs.mux.RLock()
+	defer qs.mux.RUnlock()
+	return qs.mode
 }

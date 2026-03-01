@@ -6,13 +6,13 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 	"vms-core/internal/api"
 	"vms-core/internal/api/handler"
 	"vms-core/internal/cache"
 	"vms-core/internal/config"
-	"vms-core/internal/event"
 	"vms-core/internal/infrastructure/exporter"
 	"vms-core/internal/infrastructure/exporter/clickhouse"
 	"vms-core/internal/infrastructure/exporter/influx"
@@ -21,6 +21,7 @@ import (
 	"vms-core/internal/scheduler"
 	"vms-core/internal/serial"
 	"vms-core/internal/service"
+	"vms-core/internal/store"
 	"vms-core/internal/voltronic"
 )
 
@@ -54,9 +55,6 @@ func main() {
 	tn := notifier.NewTelegram(cfg.Telegram)
 	notify := notifier.NewNotify(tn)
 
-	// event manager
-	em := event.NewManager()
-
 	// exporters
 	exps := exporter.NewMultiple()
 	if cfg.Influx.Enabled {
@@ -80,16 +78,25 @@ func main() {
 	qs := cache.NewQuerySnapshot()
 
 	// service
-	ex := service.NewExporter(inverter, exps, em, qs)
+	// store state
+	storePath := path.Join(cfg.Storage, "vms_state.json")
+	storage, err := store.NewFileStore(storePath)
+	if err != nil {
+		slog.Error("cannot create file store", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	wm := service.NewWarningMonitor(notify, storage)
+	scheduledCommands := service.NewScheduledCommands(inverter, exps, qs, wm)
 
 	server := http.NewServer()
-	inverterHandler := handler.NewInverter(inverter, em, qs)
+	inverterHandler := handler.NewInverter(inverter, qs)
 	api.BindApi(cfg.Server, server.Router(), port, inverterHandler)
 	server.Start()
 
 	// scheduler
 	sh := scheduler.NewScheduler(5 * time.Second)
-	sh.Tick(ex.ReadStatusInformation)
+	sh.Tick(scheduledCommands.Read)
 	sh.Start()
 
 	_ = notify.Send(ctx, "VMS-core started")
