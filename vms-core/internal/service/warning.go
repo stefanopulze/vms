@@ -43,7 +43,7 @@ func (w *WarningMonitor) Check(pigs *voltronic.DeviceGeneralStatus, mode string,
 func (w *WarningMonitor) checkBatteryLevel(pct int) {
 	for _, threshold := range w.batteryThreshold {
 		if pct <= threshold && !w.batteryNotified[threshold] {
-			msg := fmt.Sprintf("Battery is less than %d%%\nActual: %d%%", threshold, pct)
+			msg := fmt.Sprintf("Battery is less than %d%%", threshold)
 			w.batteryNotified[threshold] = true
 			_ = w.notifier.Send(context.Background(), msg)
 			return
