@@ -1,0 +1,31 @@
+logging:
+  level: debug
+  type: console
+
+server:
+  corsAllowedOrigins:
+    - http://localhost:3000
+
+serial:
+  portName: /tmp/ttyV0
+  baudRate: 2400
+  queueSize: 25
+
+influx:
+  enabled: false
+  host: ""
+  token: ""
+  database: test
+  organization: home
+
+clickhouse:
+  enabled: false
+  addr: ""
+  database: test
+  username: ""
+  password: ""
+
+telegram:
+  botApiKey: ""
+  chatId: ""
+

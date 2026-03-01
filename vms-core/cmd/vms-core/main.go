@@ -19,9 +19,9 @@ import (
 	"vms-core/internal/infrastructure/http"
 	"vms-core/internal/notifier"
 	"vms-core/internal/scheduler"
+	"vms-core/internal/serial"
 	"vms-core/internal/service"
 	"vms-core/internal/voltronic"
-	"vms-core/testutils"
 )
 
 func main() {
@@ -35,17 +35,17 @@ func main() {
 
 	slog.Info("VMS-core")
 
-	port := testutils.NewDummySerial()
-	testutils.MockStandardCommands(port)
-	//port, err := serial.NewQueue(&serial.QueueOptions{
-	//	PortName:     cfg.Serial.PortName,
-	//	PortBaudRate: cfg.Serial.BaudRate,
-	//	Size:         cfg.Serial.QueueSize,
-	//})
-	//if err != nil {
-	//	slog.Error(err.Error())
-	//	os.Exit(1)
-	//}
+	//port := testutils.NewDummySerial()
+	//testutils.MockStandardCommands(port)
+	port, err := serial.NewQueue(&serial.QueueOptions{
+		PortName:     cfg.Serial.PortName,
+		PortBaudRate: cfg.Serial.BaudRate,
+		Size:         cfg.Serial.QueueSize,
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
 	port.Start()
 
 	inverter := voltronic.NewClient(port)
@@ -59,19 +59,23 @@ func main() {
 
 	// exporters
 	exps := exporter.NewMultiple()
-	influxExporter, err := influx.NewClient(cfg.Influx)
-	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(1)
+	if cfg.Influx.Enabled {
+		influxExporter, err := influx.NewClient(cfg.Influx)
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+		exps.AddExporter(influxExporter)
 	}
 
-	clickhouseExporter, err := clickhouse.NewClient(cfg.ClickHouse)
-	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(1)
+	if cfg.ClickHouse.Enabled {
+		clickhouseExporter, err := clickhouse.NewClient(cfg.ClickHouse)
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+		exps.AddExporter(clickhouseExporter)
 	}
-	exps.AddExporter(influxExporter)
-	exps.AddExporter(clickhouseExporter)
 
 	qs := cache.NewQuerySnapshot()
 
