@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"vms-core/internal/notifier"
 	"vms-core/internal/store"
+	"vms-core/internal/utils"
 	"vms-core/internal/voltronic"
 )
 
@@ -24,20 +26,27 @@ func NewWarningMonitor(n notifier.Notifier, s store.Store) *WarningMonitor {
 	}
 }
 
-func (w *WarningMonitor) Check(pigs *voltronic.DeviceGeneralStatus, mode string, warnings *voltronic.DeviceWarning) {
-	// Check for Mode Change
+func (w *WarningMonitor) Check(piri *voltronic.DeviceRatingInfo, pigs *voltronic.DeviceGeneralStatus, mode string, warnings *voltronic.DeviceWarning) {
+	w.checkOutputSourcePriority(piri, mode)
+	w.checkBatteryLevel(pigs.BatteryCapacity)
+}
+
+func (w *WarningMonitor) checkOutputSourcePriority(piri *voltronic.DeviceRatingInfo, mode string) {
 	var lastMode string
-	if err := w.store.Load("mode", &lastMode); err == nil {
-		if lastMode != mode {
-			_ = w.notifier.Send(context.Background(), fmt.Sprintf("Mode changed from %s to %s", lastMode, mode))
-			_ = w.store.Save("mode", mode)
-		}
-	} else {
-		// First run or error loading, just save current mode
+	if err := w.store.Load("mode", &lastMode); err != nil {
 		_ = w.store.Save("mode", mode)
+		return
 	}
 
-	w.checkBatteryLevel(pigs.BatteryCapacity)
+	if lastMode != mode {
+		_ = w.notifier.Send(context.Background(), fmt.Sprintf(
+			"Mode %s changed from %s to %s",
+			strings.ToUpper(piri.OutputSourcePriorityEnum()),
+			utils.ModeToHuman(lastMode),
+			utils.ModeToHuman(mode),
+		))
+		_ = w.store.Save("mode", mode)
+	}
 }
 
 func (w *WarningMonitor) checkBatteryLevel(pct int) {

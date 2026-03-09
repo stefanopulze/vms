@@ -25,6 +25,13 @@ type ScheduledCommands struct {
 }
 
 func (e ScheduledCommands) Read() {
+	piri, err := e.inverter.QueryPIRI()
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to query PIRI: %s", err.Error()))
+	} else {
+		e.querySnapshot.SetRatingInfo(piri)
+	}
+
 	pigs, err := e.inverter.QueryPIGS()
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to query PIGS: %s", err.Error()))
@@ -52,5 +59,5 @@ func (e ScheduledCommands) Read() {
 		slog.Error("cannot export inverter status", slog.Any("error", err))
 	}
 
-	go e.warningMonitor.Check(pigs, mode, warnings)
+	go e.warningMonitor.Check(piri, pigs, mode, warnings)
 }

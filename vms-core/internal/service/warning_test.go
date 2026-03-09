@@ -113,7 +113,7 @@ func TestWarningMonitor_Check(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockNotifier.Messages = []string{} // Reset messages
 			// Mode is currently not used in logic, pass empty
-			wm.Check(tt.pigs, "", tt.warnings)
+			wm.Check(nil, tt.pigs, "", tt.warnings)
 
 			if tt.wantMsg == "" {
 				if len(mockNotifier.Messages) > 0 {
@@ -151,7 +151,7 @@ func TestWarningMonitor_ModeChange(t *testing.T) {
 	pigs := &voltronic.DeviceGeneralStatus{}
 	warnings := &voltronic.DeviceWarning{}
 
-	wm.Check(pigs, "line_mode", warnings)
+	wm.Check(nil, pigs, "line_mode", warnings)
 	if len(mockNotifier.Messages) != 0 {
 		t.Errorf("expected no notification on initial mode set, got %v", mockNotifier.Messages)
 	}
@@ -160,13 +160,13 @@ func TestWarningMonitor_ModeChange(t *testing.T) {
 	}
 
 	// 2. Second run, same mode -> no notification
-	wm.Check(pigs, "line_mode", warnings)
+	wm.Check(nil, pigs, "line_mode", warnings)
 	if len(mockNotifier.Messages) != 0 {
 		t.Errorf("expected no notification on same mode, got %v", mockNotifier.Messages)
 	}
 
 	// 3. Third run, different mode -> notification
-	wm.Check(pigs, "battery_mode", warnings)
+	wm.Check(nil, pigs, "battery_mode", warnings)
 	if len(mockNotifier.Messages) != 1 {
 		t.Errorf("expected 1 notification on mode change, got %d", len(mockNotifier.Messages))
 	} else {

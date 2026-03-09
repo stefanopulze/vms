@@ -12,7 +12,7 @@ COPY ./vms-ui/ .
 RUN bun run build-only
 
 ### Backend
-FROM --platform=$BUILDPLATFORM golang AS backend
+FROM --platform=$BUILDPLATFORM golang:1.26 AS backend
 ARG TARGETOS
 ARG TARGETARCH
 
