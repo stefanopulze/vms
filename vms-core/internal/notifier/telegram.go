@@ -2,47 +2,22 @@ package notifier
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"net/url"
+	"vms-core/internal/infrastructure/telegram"
 )
 
-var _ Notifier = (*telegram)(nil)
+var _ Notifier = (*telegramNotifier)(nil)
 
-type telegram struct {
-	apiKey string
-	chatId string
-	botUrl string
+type telegramNotifier struct {
+	client *telegram.Client
 }
 
-func NewTelegram(cfg TelegramConfig) Notifier {
-	return &telegram{
-		botUrl: fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", cfg.BotApiKey),
-		apiKey: cfg.BotApiKey,
-		chatId: cfg.ChatId,
+func NewTelegram(client *telegram.Client) Notifier {
+	return &telegramNotifier{
+		client: client,
 	}
 }
 
-func (t telegram) Name() string {
-	return "telegram"
-}
-
-func (t telegram) Send(ctx context.Context, message string) error {
-	data := url.Values{}
-	data.Set("chat_id", t.chatId)
-	data.Set("text", message)
-
-	// Send POST request
-	resp, err := http.PostForm(t.botUrl, data)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return nil
+func (t telegramNotifier) Send(ctx context.Context, message string) error {
+	_, err := t.client.Send(ctx, message)
+	return err
 }

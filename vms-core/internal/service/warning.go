@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"vms-core/internal/humanize"
 	"vms-core/internal/notifier"
 	"vms-core/internal/store"
-	"vms-core/internal/utils"
 	"vms-core/internal/voltronic"
 )
 
@@ -26,7 +26,7 @@ func NewWarningMonitor(n notifier.Notifier, s store.Store) *WarningMonitor {
 	}
 }
 
-func (w *WarningMonitor) Check(piri *voltronic.DeviceRatingInfo, pigs *voltronic.DeviceGeneralStatus, mode string, warnings *voltronic.DeviceWarning) {
+func (w *WarningMonitor) Check(piri *voltronic.DeviceRatingInfo, pigs *voltronic.DeviceGeneralStatus, mode string, _ *voltronic.DeviceWarning) {
 	w.checkOutputSourcePriority(piri, mode)
 	w.checkBatteryLevel(pigs.BatteryCapacity)
 }
@@ -40,10 +40,9 @@ func (w *WarningMonitor) checkOutputSourcePriority(piri *voltronic.DeviceRatingI
 
 	if lastMode != mode {
 		_ = w.notifier.Send(context.Background(), fmt.Sprintf(
-			"Mode %s changed from %s to %s",
+			"Mode %s changed to %s",
 			strings.ToUpper(piri.OutputSourcePriorityEnum()),
-			utils.ModeToHuman(lastMode),
-			utils.ModeToHuman(mode),
+			humanize.Mode(mode),
 		))
 		_ = w.store.Save("mode", mode)
 	}

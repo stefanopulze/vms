@@ -48,14 +48,14 @@ func (s *Scheduler) Stop() {
 	s.stopChan <- struct{}{}
 }
 
-func (s *Scheduler) process(ctx context.Context) {
+func (s *Scheduler) process(_ context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("Recovered panic scheduler: %v\n", r)
 		}
 	}()
 
-	slog.Debug("Processing scheduler")
+	//slog.Debug("Processing scheduler")
 	for _, t := range s.tickers {
 		t()
 	}

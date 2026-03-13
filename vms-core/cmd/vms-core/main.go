@@ -14,15 +14,16 @@ import (
 	"vms-core/internal/cache"
 	"vms-core/internal/config"
 	"vms-core/internal/infrastructure/exporter"
-	"vms-core/internal/infrastructure/exporter/clickhouse"
 	"vms-core/internal/infrastructure/exporter/influx"
 	"vms-core/internal/infrastructure/http"
+	"vms-core/internal/infrastructure/telegram"
 	"vms-core/internal/notifier"
 	"vms-core/internal/scheduler"
-	"vms-core/internal/serial"
 	"vms-core/internal/service"
+	"vms-core/internal/service/commands"
 	"vms-core/internal/store"
 	"vms-core/internal/voltronic"
+	"vms-core/testutils"
 )
 
 func main() {
@@ -36,24 +37,25 @@ func main() {
 
 	slog.Info("VMS-core")
 
-	//port := testutils.NewDummySerial()
-	//testutils.MockStandardCommands(port)
-	port, err := serial.NewQueue(&serial.QueueOptions{
-		PortName:     cfg.Serial.PortName,
-		PortBaudRate: cfg.Serial.BaudRate,
-		Size:         cfg.Serial.QueueSize,
-	})
-	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(1)
-	}
+	port := testutils.NewDummySerial()
+	testutils.MockStandardCommands(port)
+	//port, err := serial.NewQueue(&serial.QueueOptions{
+	//	PortName:     cfg.Serial.PortName,
+	//	PortBaudRate: cfg.Serial.BaudRate,
+	//	Size:         cfg.Serial.QueueSize,
+	//})
+	//if err != nil {
+	//	slog.Error(err.Error())
+	//	os.Exit(1)
+	//}
 	port.Start()
 
 	inverter := voltronic.NewClient(port)
 
+	tc := telegram.NewClient(cfg.Telegram)
+
 	// notifier
-	tn := notifier.NewTelegram(cfg.Telegram)
-	notify := notifier.NewNotify(tn)
+	notify := notifier.NewNotify(notifier.NewTelegram(tc))
 
 	// exporters
 	exps := exporter.NewMultiple()
@@ -66,16 +68,14 @@ func main() {
 		exps.AddExporter(influxExporter)
 	}
 
-	if cfg.ClickHouse.Enabled {
-		clickhouseExporter, err := clickhouse.NewClient(cfg.ClickHouse)
-		if err != nil {
-			slog.Error(err.Error())
-			os.Exit(1)
-		}
-		exps.AddExporter(clickhouseExporter)
-	}
-
 	qs := cache.NewQuerySnapshot()
+
+	if cfg.Telegram.EnableCommands {
+		statusCommand := commands.NewStatusCommand(tc, qs)
+		updateSourceCommand := commands.NewUpdateSourcePriority(tc, inverter)
+		remoteCommandService := service.NewRemoteCommands(tc, statusCommand, updateSourceCommand)
+		go tc.GetUpdates(ctx, remoteCommandService.HandleTelegramCommand)
+	}
 
 	// service
 	// store state

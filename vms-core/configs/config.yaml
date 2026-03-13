@@ -1,3 +1,4 @@
+env: dev
 logging:
   level: debug
   type: console
@@ -18,14 +19,11 @@ influx:
   database: test
   organization: home
 
-clickhouse:
-  enabled: false
-  addr: ""
-  database: test
-  username: ""
-  password: ""
-
 telegram:
+  botName: "" #"@vms_core_bot"
   botApiKey: ""
   chatId: ""
+  enableCommands: true
+  users:
+    - stefanopulze
 

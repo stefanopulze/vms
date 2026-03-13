@@ -48,16 +48,16 @@ func (e ScheduledCommands) Read() {
 	}
 	e.querySnapshot.SetMode(mode)
 
-	warnings, err := e.inverter.QueryWarning()
-	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to query warning: %s", err.Error()))
-	} else {
-		e.querySnapshot.SetWarnings(warnings)
-	}
+	//warnings, err := e.inverter.QueryWarning()
+	//if err != nil {
+	//	slog.Error(fmt.Sprintf("Failed to query warning: %s", err.Error()))
+	//} else {
+	//	e.querySnapshot.SetWarnings(warnings)
+	//}
 
 	if err = e.exporter.GeneralStatus(pigs, mode); err != nil {
 		slog.Error("cannot export inverter status", slog.Any("error", err))
 	}
 
-	go e.warningMonitor.Check(piri, pigs, mode, warnings)
+	go e.warningMonitor.Check(piri, pigs, mode, nil)
 }
