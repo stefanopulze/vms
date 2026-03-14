@@ -30,12 +30,16 @@ type RemoteCommands struct {
 func (rc RemoteCommands) HandleTelegramCommand(update telegram.Update) {
 	chatId := update.ChatId()
 	username := update.Username()
+
+	slog.Debug(fmt.Sprintf("received telegram update on chatId: %d from: %s", chatId, username))
+
 	if err := rc.telegram.ValidateMessage(chatId, username); err != nil {
 		slog.Error(
 			"someone tried to send a command to me without being in my chat",
 			slog.Any("error", err),
 			slog.Any("chat_id", chatId),
 		)
+		_ = rc.telegram.EditMessage(context.Background(), update.MessageId(), "You are not allowed to send commands to me")
 		return
 	}
 

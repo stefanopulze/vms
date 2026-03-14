@@ -5,5 +5,5 @@ type Config struct {
 	BotApiKey      string   `yaml:"botApiKey" env:"TELEGRAM_BOT_API_KEY"`
 	ChatId         string   `yaml:"chatId" env:"TELEGRAM_CHAT_ID"`
 	EnableCommands bool     `yaml:"enabledCommands" env:"TELEGRAM_ENABLE_COMMANDS"`
-	Users          []string `yaml:"users"`
+	EnabledUsers   []string `yaml:"enabledUsers"`
 }

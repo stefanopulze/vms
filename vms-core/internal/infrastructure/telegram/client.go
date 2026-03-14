@@ -23,7 +23,7 @@ func NewClient(cfg Config) *Client {
 		apiKey:          cfg.BotApiKey,
 		chatId:          chatId,
 		enabledCommands: cfg.EnableCommands,
-		enabledUsers:    cfg.Users,
+		enabledUsers:    cfg.EnabledUsers,
 		baseBotUrl:      fmt.Sprintf("https://api.telegram.org/bot%s", cfg.BotApiKey),
 		lastUpdateId:    -1,
 	}
@@ -150,9 +150,9 @@ func (tc Client) fetchUpdates(client *http.Client, offset int) ([]Update, error)
 }
 
 func (tc Client) ValidateMessage(chatId int64, username string) error {
-	if tc.chatId != chatId {
-		return fmt.Errorf("chat id %d is not valid", chatId)
-	}
+	//if tc.chatId != chatId {
+	//	return fmt.Errorf("chat id %d is not valid", chatId)
+	//}
 
 	if len(tc.enabledUsers) == 0 {
 		return nil

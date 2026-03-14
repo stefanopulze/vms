@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 	"vms-core/internal/infrastructure/telegram"
 	"vms-core/internal/voltronic"
@@ -27,9 +28,9 @@ func (c *UpdateSourcePriority) StartNewSession() (int64, error) {
 	keyboard := telegram.InlineKeyboardMarkup{
 		Keyboard: [][]telegram.InlineKeyboardButton{
 			{
-				{Text: "SBU", CallbackData: "sbu"},
-				{Text: "SUB", CallbackData: "sub"},
 				{Text: "USB", CallbackData: "usb"},
+				{Text: "SUB", CallbackData: "sub"},
+				{Text: "SBU", CallbackData: "sbu"},
 			},
 		},
 	}
@@ -59,8 +60,9 @@ func (c *UpdateSourcePriority) HandleCallback(callback *telegram.CallbackQuery) 
 		return err
 	}
 
-	c.telegram.AnswerCallback(context.Background(), callback.ID, "Source priority updated")
-	return c.telegram.EditMessage(context.Background(), callback.Message.ID, "Source priority updated")
+	c.telegram.AnswerCallback(context.Background(), callback.ID, "Command ACK")
+	return c.telegram.EditMessage(context.Background(), callback.Message.ID,
+		fmt.Sprintf("Source priority updated to: %s", callback.Data))
 }
 
 func isValidSourcePriority(v string) bool {

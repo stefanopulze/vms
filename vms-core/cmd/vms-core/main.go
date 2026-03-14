@@ -19,11 +19,11 @@ import (
 	"vms-core/internal/infrastructure/telegram"
 	"vms-core/internal/notifier"
 	"vms-core/internal/scheduler"
+	"vms-core/internal/serial"
 	"vms-core/internal/service"
 	"vms-core/internal/service/commands"
 	"vms-core/internal/store"
 	"vms-core/internal/voltronic"
-	"vms-core/testutils"
 )
 
 func main() {
@@ -37,17 +37,17 @@ func main() {
 
 	slog.Info("VMS-core")
 
-	port := testutils.NewDummySerial()
-	testutils.MockStandardCommands(port)
-	//port, err := serial.NewQueue(&serial.QueueOptions{
-	//	PortName:     cfg.Serial.PortName,
-	//	PortBaudRate: cfg.Serial.BaudRate,
-	//	Size:         cfg.Serial.QueueSize,
-	//})
-	//if err != nil {
-	//	slog.Error(err.Error())
-	//	os.Exit(1)
-	//}
+	//port := testutils.NewDummySerial()
+	//testutils.MockStandardCommands(port)
+	port, err := serial.NewQueue(&serial.QueueOptions{
+		PortName:     cfg.Serial.PortName,
+		PortBaudRate: cfg.Serial.BaudRate,
+		Size:         cfg.Serial.QueueSize,
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
 	port.Start()
 
 	inverter := voltronic.NewClient(port)
