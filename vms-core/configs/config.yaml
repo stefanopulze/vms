@@ -16,7 +16,7 @@ influx:
   enabled: false
   host: ""
   token: ""
-  database: test
+  database: voltronic
   organization: home
 
 telegram:
@@ -27,3 +27,12 @@ telegram:
   users:
     - stefanopulze
 
+database:
+  type: postgres
+  hostname: postgres.pulze.cloud:5432
+  username: vms
+  password: ""
+  name: "vms"
+
+downsampling:
+  enabled: true

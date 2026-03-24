@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"os"
+	"vms-core/internal/infrastructure/database"
 	"vms-core/internal/infrastructure/exporter/influx"
 	"vms-core/internal/infrastructure/telegram"
 
@@ -19,8 +20,10 @@ type Config struct {
 		BaudRate  int    `yaml:"baudRate" env:"SERIAL_BAUD_RATE"`
 		QueueSize int    `yaml:"queueSize" env:"SERIAL_QUEUE_SIZE"`
 	} `yaml:"serial"`
-	Influx   influx.Options  `yaml:"influx" env:"INFLUX"`
-	Telegram telegram.Config `yaml:"telegram" env:"TELEGRAM"`
+	Influx       influx.Options     `yaml:"influx" env:"INFLUX"`
+	Telegram     telegram.Config    `yaml:"telegram" env:"TELEGRAM"`
+	Database     database.Config    `yaml:"database" env:"DATABASE"`
+	Downsampling DownsamplingConfig `yaml:"downsampling"`
 }
 
 func LoadConfig() (*Config, error) {

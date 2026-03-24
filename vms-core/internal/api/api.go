@@ -15,7 +15,7 @@ import (
 	"github.com/go-chi/cors"
 )
 
-func BindApi(cfg config.ServerConfig, router *chi.Mux, port serial.Serial, ih *handler.InverterHandler) {
+func BindApi(cfg config.ServerConfig, router *chi.Mux, port serial.Serial, ih *handler.InverterHandler, sh *handler.StatsHandler) {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	if len(cfg.CorsAllowedOrigins) > 0 {
@@ -31,6 +31,7 @@ func BindApi(cfg config.ServerConfig, router *chi.Mux, port serial.Serial, ih *h
 
 	router.Route("/api", func(r chi.Router) {
 		bindInverterApi(r, ih)
+		bindStatsApi(r, sh)
 		bindHealthApi(r, port)
 	})
 
@@ -47,6 +48,11 @@ func bindStaticFiles(router *chi.Mux) {
 		fs := http.StripPrefix(pathPrefix, http.FileServer(filesDir))
 		fs.ServeHTTP(w, r)
 	})
+}
+
+func bindStatsApi(router chi.Router, handler *handler.StatsHandler) {
+	router.Get("/stats", handler.GetDayStats)
+	router.Get("/downsampling", handler.DownsamplingDayStats)
 }
 
 func bindHealthApi(router chi.Router, port serial.Serial) {

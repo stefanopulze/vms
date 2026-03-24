@@ -59,3 +59,20 @@ ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (timestamp);
 ```
+
+## Database
+
+```sql
+CREATE TABLE daily_usage (
+    id BIGSERIAL PRIMARY KEY ,
+    date date,
+    line int,
+    home int,
+    garage int,
+    inverter int,
+    solar_production int,
+    offgrid_percent int
+);
+
+create index daily_usage_date_idx on daily_usage (date);
+```

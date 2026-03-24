@@ -16,11 +16,11 @@ func Mode(mode string) string {
 func OutputSourceFull(source string) string {
 	switch source {
 	case "usb":
-		return "Utility Solar Battery"
+		return "Utility SolarProduction Battery"
 	case "sub":
-		return "Solar Utility Battery"
+		return "SolarProduction Utility Battery"
 	case "sbu":
-		return "Solar Battery Utility"
+		return "SolarProduction Battery Utility"
 	default:
 		return strings.ToUpper(source)
 	}

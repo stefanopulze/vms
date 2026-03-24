@@ -37,7 +37,7 @@ func (s StatusCommand) StartNewSession() (int64, error) {
 	} else {
 		message = fmt.Sprintf("Mode: %s\n", humanize.Mode(mode))
 		message += fmt.Sprintf("Output Source Priority: %s\n", humanize.OutputSourceFull(piri.OutputSourcePriorityEnum()))
-		message += fmt.Sprintf("Solar production: %dw\n", pigs.PhotovoltaicChargingPower)
+		message += fmt.Sprintf("SolarProduction production: %dw\n", pigs.PhotovoltaicChargingPower)
 		message += fmt.Sprintf("Battery")
 		message += fmt.Sprintf("\tCapacity: %d%%\n", pigs.BatteryCapacity)
 		message += fmt.Sprintf("\tCharging: %.2fw\n", pigs.BatteryChargingPower)

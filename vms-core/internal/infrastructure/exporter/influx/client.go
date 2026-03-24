@@ -2,10 +2,14 @@ package influx
 
 import (
 	"context"
+	"time"
+	"vms-core/internal/infrastructure/exporter"
 	"vms-core/internal/voltronic"
 
 	"github.com/InfluxCommunity/influxdb3-go/v2/influxdb3"
 )
+
+var _ exporter.Client = (*Client)(nil)
 
 func NewClient(opts Options) (*Client, error) {
 	client, err := influxdb3.New(influxdb3.ClientConfig{
@@ -64,12 +68,27 @@ func (c *Client) GeneralStatus(pigs *voltronic.DeviceGeneralStatus, mode string)
 
 	point := influxdb3.NewPoint("inverter", tags, fields, pigs.Timestamp)
 
-	fields2 := map[string]interface{}{}
-	fields2["active_power"] = float64(pigs.AlternatingCurrentOutputActivePower)
-	tags2 := map[string]string{}
-	tags2["name"] = "inverter"
-	tags2["type"] = "holding_register"
-	point2 := influxdb3.NewPoint("power", tags2, fields2, pigs.Timestamp)
+	return c.client.WritePoints(context.Background(), []*influxdb3.Point{point})
+}
 
-	return c.client.WritePoints(context.Background(), []*influxdb3.Point{point, point2})
+func (c *Client) Query(ctx context.Context, query string, params map[string]any) ([]map[string]any, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	iterator, err := c.client.QueryWithParameters(ctx, query, params)
+	if err != nil {
+		return nil, err
+	}
+
+	values := make([]map[string]any, 0)
+	for iterator.Next() {
+		value := iterator.Value()
+		values = append(values, value)
+	}
+
+	return values, nil
+}
+
+func (c *Client) WritePoints(ctx context.Context, points ...*influxdb3.Point) error {
+	return c.client.WritePoints(ctx, points)
 }

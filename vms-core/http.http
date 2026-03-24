@@ -70,3 +70,21 @@ Content-Type: application/json
 #@no-log
 GET {{host}}/api/inverter/max-ac-charging-current-values
 Content-Type: application/json
+
+###
+#@name Stats
+#@no-log
+GET {{host}}/api/stats?day=2026-03-22
+Content-Type: application/json
+
+###
+#@name Stats Downsampling
+#@no-log
+GET {{host}}/api/downsampling?day=2026-01-27
+Content-Type: application/json
+
+###
+#@name Stats Downsampling range
+#@no-log
+GET {{host}}/api/downsampling?from=2026-01-01&to=2026-03-28
+Content-Type: application/json
