@@ -1,7 +1,7 @@
 package service
 
 import (
-	"log"
+	"fmt"
 	"log/slog"
 	"time"
 )
@@ -26,17 +26,16 @@ func (d *Downsampling) Tick(job func()) {
 
 	for {
 		waitDuration := durationUntilNext1AM()
-		log.Printf("Next run in %s (at %s)\n",
+		slog.Info(fmt.Sprintf("Next run in %s (at %s)",
 			waitDuration.Round(time.Second),
 			time.Now().Add(waitDuration).Format("2006-01-02 15:04:05"),
-		)
+		))
 
 		timer := time.NewTimer(waitDuration)
 		<-timer.C
 
-		go job() // run in goroutine so scheduling isn't blocked
+		go job()
 
-		// Small sleep to avoid re-triggering in the same second
 		time.Sleep(1 * time.Second)
 	}
 }

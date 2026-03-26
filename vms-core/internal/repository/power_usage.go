@@ -38,9 +38,8 @@ func (d DailyUsage) Insert(ctx context.Context, du domain.DailyUsage) (int, erro
 	return id, nil
 }
 
-func (d DailyUsage) Update(ctx context.Context, du domain.DailyUsage) error {
-	//line = $7
-	query := `UPDATE daily_usage SET home = $2, garage = $3, inverter = $4, solar_production = $5, offgrid_percent = $6 WHERE id = $1`
-	_, err := d.db.Conn().Exec(ctx, query, du.ID, du.Home, du.Garage, du.Inverter, du.SolarProduction, du.OffGridPercent) // du.Line
+func (d DailyUsage) Update(ctx context.Context, date string, du domain.DailyUsage) error {
+	query := `UPDATE daily_usage SET home = $2, garage = $3, inverter = $4, solar_production = $5, offgrid_percent = $6, line = $7 WHERE date = $1`
+	_, err := d.db.Conn().Exec(ctx, query, date, du.Home, du.Garage, du.Inverter, du.SolarProduction, du.OffGridPercent, du.Line)
 	return err
 }

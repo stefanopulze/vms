@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 	"vms-core/internal/domain"
@@ -71,7 +72,7 @@ func (s Stats) GetDayPowerUsage(ctx context.Context, day string) (*model.DailyUs
 }
 
 func (s Stats) getCategoryPowerUsage(ctx context.Context, day, name string) (int32, error) {
-	// sum(active_power) / 43_200 (power read) * 24 (hours) ; for math semplification 43_200 / 24 = 1800
+	// sum(active_power) / 43_200 (power read) * 24 (hours); for math simplification 43_200 / 24 = 1800
 	query := `SELECT date_bin(interval '1 day', time) as time, sum(active_power) / 1800 as 'active_power'
 FROM power_meter 
 WHERE time >= DATE_TRUNC('day', $day) AND time < DATE_TRUNC('day', $day) + INTERVAL '1 day' AND name = $name
@@ -92,7 +93,7 @@ order by time`
 }
 
 func (s Stats) getInverterPowerUsage(ctx context.Context, day string) (int32, int32, error) {
-	// 86_400 seconds in a day / read every 5 seconds = 17280 reads per day * 24 hours = 43_200
+	// 86_400 seconds in a day / read every 5 seconds = 17,280 reads per day * 24 hours = 43_200
 	query := `SELECT 
 			date_bin(interval '1 day', time) as time, 
 			sum(ac_output_active_power ) / 720  as 'ac_output_active_power',
@@ -130,7 +131,8 @@ func (s Stats) WriteDailyUsage(ctx context.Context, stats *model.DailyUsage) err
 }
 
 func (s Stats) writeDatabaseDailyUsages(ctx context.Context, stats *model.DailyUsage) error {
-	count, err := s.repository.CountByDate(ctx, stats.Timestamp.Format("2006-01-02"))
+	date := stats.Timestamp.Format("2006-01-02")
+	count, err := s.repository.CountByDate(ctx, date)
 	if err != nil {
 		return err
 	}
@@ -146,7 +148,7 @@ func (s Stats) writeDatabaseDailyUsages(ctx context.Context, stats *model.DailyU
 	}
 
 	if count > 0 {
-		err = s.repository.Update(ctx, du)
+		err = s.repository.Update(ctx, date, du)
 	} else {
 		_, err = s.repository.Insert(ctx, du)
 	}
@@ -170,7 +172,9 @@ func (s Stats) writeInfluxDailyUsage(ctx context.Context, stats *model.DailyUsag
 	return s.influx.WritePoints(ctx, point)
 }
 
+// DownsamplingDay get day power usage and store it in a database
 func (s Stats) DownsamplingDay(ctx context.Context, day string) (*model.DailyUsage, error) {
+	slog.Info(fmt.Sprintf("Downsampling day: %s", day))
 	stats, err := s.GetDayPowerUsage(ctx, day)
 	if err != nil {
 		return nil, err
