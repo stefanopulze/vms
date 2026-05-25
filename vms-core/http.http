@@ -80,7 +80,7 @@ Content-Type: application/json
 ###
 #@name Stats Downsampling
 #@no-log
-GET {{host}}/api/downsampling?day=2026-03-26
+GET {{host}}/api/downsampling?day=2026-03-25
 Content-Type: application/json
 
 ###

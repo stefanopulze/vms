@@ -49,16 +49,22 @@ func (w *WarningMonitor) checkOutputSourcePriority(piri *voltronic.DeviceRatingI
 }
 
 func (w *WarningMonitor) checkBatteryLevel(pct int) {
+	var message string
+
 	for _, threshold := range w.batteryThreshold {
 		if pct <= threshold && !w.batteryNotified[threshold] {
-			msg := fmt.Sprintf("Battery is less than %d%%", threshold)
+			message = fmt.Sprintf("Battery is less than %d%%", threshold)
 			w.batteryNotified[threshold] = true
-			_ = w.notifier.Send(context.Background(), msg)
-			return
+			break
 		}
 
 		if pct >= threshold+5 && w.batteryNotified[threshold] {
 			w.batteryNotified[threshold] = false
+			message = fmt.Sprintf("🎉 Battery is charging %d%%", pct)
 		}
+	}
+
+	if message != "" {
+		_ = w.notifier.Send(context.Background(), message)
 	}
 }
