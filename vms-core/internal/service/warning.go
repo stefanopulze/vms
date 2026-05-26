@@ -61,6 +61,8 @@ func (w *WarningMonitor) checkBatteryLevel(pct int) {
 		if pct >= threshold+5 && w.batteryNotified[threshold] {
 			w.batteryNotified[threshold] = false
 			message = fmt.Sprintf("🎉 Battery is charging %d%%", pct)
+		} else if pct == 100 {
+			message = fmt.Sprintf("🎉 Battery is fully charged")
 		}
 	}
 
