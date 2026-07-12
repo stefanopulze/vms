@@ -3,7 +3,7 @@
 ### Remote Debugging
 ```bash
 # From remote host
-socat -d -d TCP-LISTEN:5000,reuseaddr,fork FILE:/dev/ttyUSB1,raw,echo=0,b2400
+socat -d -d TCP-LISTEN:5000,reuseaddr,fork FILE:/dev/ttyUSB0,raw,echo=0,b2400
 
 # From localhost
 socat -d -d PTY,link=/tmp/ttyV0,rawer,echo=0 TCP:192.168.1.42:5000

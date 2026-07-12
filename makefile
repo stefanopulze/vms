@@ -1,4 +1,4 @@
-VERSION ?= 1.0.0
+VERSION ?= 1.1.0
 
 build:
 	podman build -t harbor.pulze.cloud/voltronic/vms-core:$(VERSION) --arch=arm64 .
