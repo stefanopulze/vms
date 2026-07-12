@@ -41,7 +41,7 @@ type Client struct {
 
 func (tc Client) send(_ context.Context, msg string, replyMarkup any) (int64, error) {
 	payload := url.Values{}
-	payload.Set("chat_id", fmt.Sprintf("%d", tc.chatId))
+	payload.Set("chat_id", strconv.FormatInt(tc.chatId, 10))
 	payload.Set("text", msg)
 
 	if replyMarkup != nil {
@@ -70,7 +70,7 @@ func (tc Client) send(_ context.Context, msg string, replyMarkup any) (int64, er
 		return 0, err
 	}
 	if !telegramResponse.OK {
-		return 0, fmt.Errorf("unable to send message: %s", telegramResponse)
+		return 0, fmt.Errorf("unable to send message: %s", telegramResponse.Description)
 	}
 
 	return telegramResponse.Result.MessageID, nil
@@ -90,8 +90,8 @@ func (tc Client) SendWithMarkup(ctx context.Context, msg string, markup any) (in
 
 func (tc Client) EditMessage(_ context.Context, messageID int64, msg string) error {
 	payload := url.Values{}
-	payload.Set("chat_id", fmt.Sprintf("%d", tc.chatId))
-	payload.Set("message_id", fmt.Sprintf("%d", messageID))
+	payload.Set("chat_id", strconv.FormatInt(tc.chatId, 10))
+	payload.Set("message_id", strconv.FormatInt(messageID, 10))
 	payload.Set("text", msg)
 
 	apiUrl := fmt.Sprintf("%s/editMessageText", tc.baseBotUrl)
@@ -124,7 +124,7 @@ func (tc Client) GetUpdates(ctx context.Context, handler func(Update)) {
 
 			for i := 0; i < len(updates); i++ {
 				tc.lastUpdateId = updates[i].UpdateID
-				go handler(updates[i])
+				handler(updates[i])
 			}
 		}
 	}

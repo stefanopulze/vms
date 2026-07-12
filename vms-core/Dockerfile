@@ -2,6 +2,7 @@
 FROM --platform=$BUILDPLATFORM golang AS builder
 ARG TARGETOS
 ARG TARGETARCH
+ARG VERSION=dev
 
 WORKDIR /app
 COPY go.mod go.sum* ./
@@ -10,7 +11,7 @@ RUN go mod tidy && go mod download
 COPY . .
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-    -ldflags="-w -s" \
+    -ldflags="-w -s -X main.version=${VERSION}" \
     -a \
     -installsuffix cgo \
     -o /app/dist/vms-core ./cmd/vms-core

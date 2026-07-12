@@ -27,8 +27,12 @@ func NewWarningMonitor(n notifier.Notifier, s store.Store) *WarningMonitor {
 }
 
 func (w *WarningMonitor) Check(piri *voltronic.DeviceRatingInfo, pigs *voltronic.DeviceGeneralStatus, mode string, _ *voltronic.DeviceWarning) {
-	w.checkOutputSourcePriority(piri, mode)
-	w.checkBatteryLevel(pigs.BatteryCapacity)
+	if piri != nil {
+		w.checkOutputSourcePriority(piri, mode)
+	}
+	if pigs != nil {
+		w.checkBatteryLevel(pigs.BatteryCapacity)
+	}
 }
 
 func (w *WarningMonitor) checkOutputSourcePriority(piri *voltronic.DeviceRatingInfo, mode string) {
@@ -49,22 +53,33 @@ func (w *WarningMonitor) checkOutputSourcePriority(piri *voltronic.DeviceRatingI
 }
 
 func (w *WarningMonitor) checkBatteryLevel(pct int) {
-	var message string
+	// batteryThreshold is ascending, so the first breached entry is the most severe.
+	lowest := -1
+	charging := false
 
 	for _, threshold := range w.batteryThreshold {
-		if pct <= threshold && !w.batteryNotified[threshold] {
-			message = fmt.Sprintf("Battery is less than %d%%", threshold)
+		switch {
+		// crossed below a threshold while discharging: mark it, remember the lowest
+		case pct <= threshold && !w.batteryNotified[threshold]:
 			w.batteryNotified[threshold] = true
-			break
-		}
+			if lowest == -1 {
+				lowest = threshold
+			}
 
-		if pct >= threshold+5 && w.batteryNotified[threshold] {
+		// recovered above a threshold (with 5% hysteresis): reset and flag recovery
+		case pct >= threshold+5 && w.batteryNotified[threshold]:
 			w.batteryNotified[threshold] = false
-			message = fmt.Sprintf("🎉 Battery is charging %d%%", pct)
+			charging = true
 		}
 	}
 
-	if message != "" {
-		_ = w.notifier.Send(context.Background(), message)
+	// a single alert for the most severe threshold crossed this tick
+	if lowest != -1 {
+		_ = w.notifier.Send(context.Background(), fmt.Sprintf("Battery is less than %d%%", lowest))
+	}
+
+	// a single recovery notification even if several thresholds cleared at once
+	if charging {
+		_ = w.notifier.Send(context.Background(), fmt.Sprintf("🎉 Battery is charging %d%%", pct))
 	}
 }

@@ -15,6 +15,7 @@ RUN bun run build-only
 FROM --platform=$BUILDPLATFORM golang:1.26 AS backend
 ARG TARGETOS
 ARG TARGETARCH
+ARG VERSION=dev
 
 WORKDIR /app
 COPY ./vms-core/go.mod ./vms-core/go.sum* ./
@@ -23,7 +24,7 @@ RUN go mod tidy && go mod download
 COPY ./vms-core/ .
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-    -ldflags="-w -s" \
+    -ldflags="-w -s -X main.version=${VERSION}" \
     -a \
     -installsuffix cgo \
     -o /app/dist/vms-core ./cmd/vms-core

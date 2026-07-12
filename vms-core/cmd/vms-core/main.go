@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -27,6 +28,10 @@ import (
 	"vms-core/internal/voltronic"
 )
 
+// version is the software version, injected at build time via
+// -ldflags "-X main.version=x.y.z". Defaults to "dev" for local builds.
+var version = "dev"
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
@@ -36,7 +41,7 @@ func main() {
 		log.Fatalf("cannot load config: %v", err)
 	}
 
-	slog.Info("VMS-core")
+	slog.Info("VMS-core: " + version)
 
 	//port := testutils.NewDummySerial()
 	//testutils.MockStandardCommands(port)
@@ -54,6 +59,7 @@ func main() {
 	inverter := voltronic.NewClient(port)
 
 	tc := telegram.NewClient(cfg.Telegram)
+	_, _ = tc.Send(ctx, fmt.Sprintf("vms-core %s starting", version))
 
 	// notifier
 	notify := notifier.NewNotify(notifier.NewTelegram(tc))

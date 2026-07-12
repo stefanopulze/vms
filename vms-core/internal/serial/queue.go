@@ -1,7 +1,6 @@
 package serial
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -61,6 +60,7 @@ func NewQueue(opts *QueueOptions) (Serial, error) {
 }
 
 func (sq *Queue) Start() {
+	sq.wg.Add(1)
 	go sq.processQueue()
 }
 
@@ -79,6 +79,7 @@ func (sq *Queue) Write(data []byte) ([]byte, error) {
 
 // processQueue process queue commands
 func (sq *Queue) processQueue() {
+	defer sq.wg.Done()
 	for cmd := range sq.queue {
 		sq.executeCommand(cmd)
 	}
@@ -86,9 +87,6 @@ func (sq *Queue) processQueue() {
 
 // executeCommand write command to serial and read response
 func (sq *Queue) executeCommand(cmd command) {
-	_, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
 	sq.mu.Lock()
 	sq.processing = true
 	sq.mu.Unlock()

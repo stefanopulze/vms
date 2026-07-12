@@ -33,10 +33,9 @@ func (d *Downsampling) Tick(job func()) {
 
 		timer := time.NewTimer(waitDuration)
 		<-timer.C
+		timer.Stop()
 
-		go job()
-
-		time.Sleep(1 * time.Second)
+		job()
 	}
 }
 

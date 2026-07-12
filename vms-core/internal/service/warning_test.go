@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"vms-core/internal/voltronic"
 )
@@ -16,7 +15,7 @@ func (m *MockNotifier) Name() string {
 	return "mock"
 }
 
-func (m *MockNotifier) Send(ctx context.Context, message string) error {
+func (m *MockNotifier) Send(_ context.Context, message string) error {
 	m.Messages = append(m.Messages, message)
 	return nil
 }
@@ -40,9 +39,8 @@ func (m *MockStore) Save(key string, value interface{}) error {
 func (m *MockStore) Load(key string, value interface{}) error {
 	val, ok := m.Data[key]
 	if !ok {
-		return context.DeadlineExceeded // Just an error
+		return context.DeadlineExceeded // any "not found" error
 	}
-	// Similar simple hack for mock as in real store
 	if vStr, ok := val.(string); ok {
 		if destStr, ok := value.(*string); ok {
 			*destStr = vStr
@@ -52,130 +50,141 @@ func (m *MockStore) Load(key string, value interface{}) error {
 	return nil
 }
 
-func TestWarningMonitor_Check(t *testing.T) {
-	mockNotifier := &MockNotifier{}
-	mockStore := NewMockStore()
-	wm := NewWarningMonitor(mockNotifier, mockStore)
+func newMonitor() (*WarningMonitor, *MockNotifier, *MockStore) {
+	notifier := &MockNotifier{}
+	store := NewMockStore()
+	return NewWarningMonitor(notifier, store), notifier, store
+}
 
-	tests := []struct {
-		name     string
-		pigs     *voltronic.DeviceGeneralStatus
-		warnings *voltronic.DeviceWarning
-		wantMsg  string
-	}{
-		{
-			name: "No warnings",
-			pigs: &voltronic.DeviceGeneralStatus{},
-			warnings: &voltronic.DeviceWarning{
-				OverTemperature: false,
-				OverLoad:        false,
-			},
-			wantMsg: "",
-		},
-		{
-			name: "Over Temperature",
-			pigs: &voltronic.DeviceGeneralStatus{},
-			warnings: &voltronic.DeviceWarning{
-				OverTemperature: true,
-			},
-			wantMsg: "Over Temperature",
-		},
-		{
-			name: "Over Load",
-			pigs: &voltronic.DeviceGeneralStatus{},
-			warnings: &voltronic.DeviceWarning{
-				OverLoad: true,
-			},
-			wantMsg: "Over Load",
-		},
-		{
-			name: "High Heat Sink Temperature",
-			pigs: &voltronic.DeviceGeneralStatus{
-				InverterHeatSinkTemperature: 85,
-			},
-			warnings: &voltronic.DeviceWarning{},
-			wantMsg:  "High Heat Sink Temperature: 85",
-		},
-		{
-			name: "Multiple Warnings",
-			pigs: &voltronic.DeviceGeneralStatus{
-				InverterHeatSinkTemperature: 90,
-			},
-			warnings: &voltronic.DeviceWarning{
-				OverTemperature:   true,
-				BatteryVoltageLow: true,
-			},
-			wantMsg: "Over Temperature", // Just checking containment
-		},
+// Check must not panic when the inverter queries failed and nil snapshots are passed.
+func TestWarningMonitor_Check_NilInputs(t *testing.T) {
+	wm, notifier, _ := newMonitor()
+
+	wm.Check(nil, nil, "line_mode", nil)
+
+	if len(notifier.Messages) != 0 {
+		t.Errorf("expected no notifications for nil inputs, got %v", notifier.Messages)
+	}
+}
+
+func TestWarningMonitor_BatteryLevel(t *testing.T) {
+	wm, notifier, _ := newMonitor()
+
+	check := func(pct int) {
+		notifier.Messages = nil
+		wm.checkBatteryLevel(pct)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockNotifier.Messages = []string{} // Reset messages
-			// Mode is currently not used in logic, pass empty
-			wm.Check(nil, tt.pigs, "", tt.warnings)
+	// Healthy battery: no alert.
+	check(90)
+	if len(notifier.Messages) != 0 {
+		t.Fatalf("expected no alert at 90%%, got %v", notifier.Messages)
+	}
 
-			if tt.wantMsg == "" {
-				if len(mockNotifier.Messages) > 0 {
-					t.Errorf("expected no messages, got %v", mockNotifier.Messages)
-				}
-			} else {
-				if len(mockNotifier.Messages) == 0 {
-					t.Errorf("expected message containing %q, got none", tt.wantMsg)
-				} else {
-					got := mockNotifier.Messages[0]
-					if !strings.Contains(got, tt.wantMsg) {
-						t.Errorf("expected message containing %q, got %q", tt.wantMsg, got)
-					}
-					// Check for multiple if needed
-					if tt.name == "Multiple Warnings" {
-						if !strings.Contains(got, "Battery Voltage Low") {
-							t.Errorf("expected message containing 'Battery Voltage Low', got %q", got)
-						}
-						if !strings.Contains(got, "High Heat Sink Temperature: 90") {
-							t.Errorf("expected message containing 'High Heat Sink Temperature: 90', got %q", got)
-						}
-					}
-				}
-			}
-		})
+	// Drops just below 80 -> single alert for the crossed threshold.
+	check(79)
+	if len(notifier.Messages) != 1 || notifier.Messages[0] != "Battery is less than 80%" {
+		t.Fatalf("expected single '< 80%%' alert, got %v", notifier.Messages)
+	}
+
+	// Still below 80 but not recovered -> no repeat alert.
+	check(79)
+	if len(notifier.Messages) != 0 {
+		t.Fatalf("expected no repeat alert while staying below 80%%, got %v", notifier.Messages)
+	}
+
+	// Continues to drop past 50 -> alert only for the newly crossed threshold.
+	check(49)
+	if len(notifier.Messages) != 1 || notifier.Messages[0] != "Battery is less than 50%" {
+		t.Fatalf("expected single '< 50%%' alert, got %v", notifier.Messages)
+	}
+}
+
+// A large single drop should report only the most severe threshold, not one per band.
+func TestWarningMonitor_BatteryLevel_SingleAlertPerTick(t *testing.T) {
+	wm, notifier, _ := newMonitor()
+
+	wm.checkBatteryLevel(10) // below 80, 50, 30 and 20 at once
+
+	if len(notifier.Messages) != 1 {
+		t.Fatalf("expected a single alert for the most severe threshold, got %v", notifier.Messages)
+	}
+	if notifier.Messages[0] != "Battery is less than 20%" {
+		t.Errorf("expected '< 20%%' (most severe), got %q", notifier.Messages[0])
+	}
+}
+
+// Recovery (with hysteresis) resets thresholds and emits one charging notification.
+func TestWarningMonitor_BatteryLevel_Recovery(t *testing.T) {
+	wm, notifier, _ := newMonitor()
+
+	wm.checkBatteryLevel(10) // trip every threshold
+
+	notifier.Messages = nil
+	wm.checkBatteryLevel(90) // recovers above all thresholds + hysteresis
+	if len(notifier.Messages) != 1 {
+		t.Fatalf("expected a single charging notification, got %v", notifier.Messages)
+	}
+	if notifier.Messages[0] != "🎉 Battery is charging 90%" {
+		t.Errorf("unexpected charging message: %q", notifier.Messages[0])
+	}
+
+	// After recovery, dropping again must alert once more.
+	notifier.Messages = nil
+	wm.checkBatteryLevel(79)
+	if len(notifier.Messages) != 1 || notifier.Messages[0] != "Battery is less than 80%" {
+		t.Errorf("expected '< 80%%' alert after recovery, got %v", notifier.Messages)
+	}
+}
+
+// Hysteresis: rising just above a threshold (but within 5%%) does not count as recovery.
+func TestWarningMonitor_BatteryLevel_Hysteresis(t *testing.T) {
+	wm, notifier, _ := newMonitor()
+
+	wm.checkBatteryLevel(19) // trips the 20%% threshold
+
+	notifier.Messages = nil
+	wm.checkBatteryLevel(23) // above 20 but below 20+5 -> not recovered
+	if len(notifier.Messages) != 0 {
+		t.Fatalf("expected no recovery within hysteresis band, got %v", notifier.Messages)
+	}
+
+	wm.checkBatteryLevel(25) // reaches 20+5 -> recovery
+	if len(notifier.Messages) != 1 || notifier.Messages[0] != "🎉 Battery is charging 25%" {
+		t.Errorf("expected charging notification at hysteresis boundary, got %v", notifier.Messages)
 	}
 }
 
 func TestWarningMonitor_ModeChange(t *testing.T) {
-	mockNotifier := &MockNotifier{}
-	mockStore := NewMockStore()
-	wm := NewWarningMonitor(mockNotifier, mockStore)
+	wm, notifier, store := newMonitor()
 
-	// 1. First run, unknown mode -> sets mode, no notification
-	pigs := &voltronic.DeviceGeneralStatus{}
-	warnings := &voltronic.DeviceWarning{}
+	piri := &voltronic.DeviceRatingInfo{OutputSourcePriority: 2} // "sbu"
+	healthy := &voltronic.DeviceGeneralStatus{BatteryCapacity: 90}
 
-	wm.Check(nil, pigs, "line_mode", warnings)
-	if len(mockNotifier.Messages) != 0 {
-		t.Errorf("expected no notification on initial mode set, got %v", mockNotifier.Messages)
+	// 1. First observation: unknown previous mode -> store it, no notification.
+	wm.Check(piri, healthy, "line_mode", nil)
+	if len(notifier.Messages) != 0 {
+		t.Errorf("expected no notification on initial mode set, got %v", notifier.Messages)
 	}
-	if val, _ := mockStore.Data["mode"]; val != "line_mode" {
-		t.Errorf("expected mode to be saved as line_mode, got %v", val)
+	if store.Data["mode"] != "line_mode" {
+		t.Errorf("expected mode saved as line_mode, got %v", store.Data["mode"])
 	}
 
-	// 2. Second run, same mode -> no notification
-	wm.Check(nil, pigs, "line_mode", warnings)
-	if len(mockNotifier.Messages) != 0 {
-		t.Errorf("expected no notification on same mode, got %v", mockNotifier.Messages)
+	// 2. Same mode -> no notification.
+	wm.Check(piri, healthy, "line_mode", nil)
+	if len(notifier.Messages) != 0 {
+		t.Errorf("expected no notification on unchanged mode, got %v", notifier.Messages)
 	}
 
-	// 3. Third run, different mode -> notification
-	wm.Check(nil, pigs, "battery_mode", warnings)
-	if len(mockNotifier.Messages) != 1 {
-		t.Errorf("expected 1 notification on mode change, got %d", len(mockNotifier.Messages))
-	} else {
-		expected := "Mode changed from line_mode to battery_mode"
-		if mockNotifier.Messages[0] != expected {
-			t.Errorf("expected notification %q, got %q", expected, mockNotifier.Messages[0])
-		}
+	// 3. Mode change -> one notification, updated store.
+	wm.Check(piri, healthy, "battery_mode", nil)
+	if len(notifier.Messages) != 1 {
+		t.Fatalf("expected 1 notification on mode change, got %d (%v)", len(notifier.Messages), notifier.Messages)
 	}
-	if val, _ := mockStore.Data["mode"]; val != "battery_mode" {
-		t.Errorf("expected mode to be updated to battery_mode, got %v", val)
+	if want := "Mode SBU changed to battery"; notifier.Messages[0] != want {
+		t.Errorf("expected notification %q, got %q", want, notifier.Messages[0])
+	}
+	if store.Data["mode"] != "battery_mode" {
+		t.Errorf("expected mode updated to battery_mode, got %v", store.Data["mode"])
 	}
 }

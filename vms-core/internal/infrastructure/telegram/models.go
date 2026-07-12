@@ -6,8 +6,9 @@ type SendMsg struct {
 }
 
 type MessageResponse struct {
-	OK     bool `json:"ok"`
-	Result struct {
+	OK          bool   `json:"ok"`
+	Description string `json:"description"`
+	Result      struct {
 		MessageID int64 `json:"message_id"`
 	} `json:"result"`
 }
